@@ -37,7 +37,7 @@
 # Hidden template job (prefix with . to make it abstract)
 # Users should extend this in their own .gitlab-ci.yml
 .sync-marketplaces-template:
-  image: registry.access.redhat.com/ubi9/python-312:latest
+  image: registry.access.redhat.com/ubi10/python-312-minimal:latest
   stage: deploy
 
   # Default variables - can be overridden by extending jobs
