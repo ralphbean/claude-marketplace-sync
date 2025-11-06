@@ -329,7 +329,7 @@ class TestMarketplaceProcessing:
         config_data = {
             "marketplace": {"name": "test"},
             "sources": [],
-            "sync_settings": {"provenance_field": "source_marketplace"},
+            "sync_settings": {"origin_field": "source_marketplace"},
         }
         config_file.write_text(json.dumps(config_data))
 
@@ -389,7 +389,7 @@ class TestMarketplaceProcessing:
         config_data = {
             "marketplace": {"name": "test"},
             "sources": [],
-            "sync_settings": {"provenance_field": "source_marketplace"},
+            "sync_settings": {"origin_field": "source_marketplace"},
         }
         config_file.write_text(json.dumps(config_data))
 
@@ -510,10 +510,10 @@ class TestSourceURLConversion:
 
 
 class TestDiamondDependencyDeduplication:
-    """Test that diamond dependencies are properly deduplicated with merged provenance."""
+    """Test that diamond dependencies are properly deduplicated with merged origin."""
 
-    def test_diamond_dependency_merges_provenance(self, tmp_path):
-        """Test that when a plugin appears in multiple marketplaces, provenance is merged into array."""
+    def test_diamond_dependency_merges_origin(self, tmp_path):
+        """Test that when a plugin appears in multiple marketplaces, origin is merged into array."""
         config_file = tmp_path / "config.json"
         config_file.write_text(
             json.dumps(

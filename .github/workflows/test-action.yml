@@ -43,7 +43,7 @@ jobs:
             ],
             "sync_settings": {
               "exclude_patterns": [".git", ".github"],
-              "provenance_field": "source_marketplace"
+              "origin_field": "source_marketplace"
             }
           }
           EOF
@@ -101,10 +101,10 @@ jobs:
           jq -e '.version' test-output/marketplace.json > /dev/null || (echo "::error::Missing 'version' field" && exit 1)
           jq -e '.plugins' test-output/marketplace.json > /dev/null || (echo "::error::Missing 'plugins' field" && exit 1)
 
-          # Check that plugins have provenance
+          # Check that plugins have origin
           PLUGIN_COUNT=$(jq '.plugins | length' test-output/marketplace.json)
           if [ "$PLUGIN_COUNT" -gt 0 ]; then
-            jq -e '.plugins[0].source_marketplace' test-output/marketplace.json > /dev/null || (echo "::error::Plugins missing provenance field" && exit 1)
+            jq -e '.plugins[0].source_marketplace' test-output/marketplace.json > /dev/null || (echo "::error::Plugins missing origin field" && exit 1)
           fi
 
           echo "::notice::Marketplace structure validation passed!"

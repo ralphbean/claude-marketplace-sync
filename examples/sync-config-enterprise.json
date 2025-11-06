@@ -43,6 +43,6 @@
   ],
   "sync_settings": {
     "exclude_patterns": [".git", ".github", ".gitlab", "node_modules", ".DS_Store", "__pycache__"],
-    "provenance_field": "source_marketplace"
+    "origin_field": "source_marketplace"
   }
 }

@@ -20,6 +20,6 @@
   ],
   "sync_settings": {
     "exclude_patterns": [".git", ".github", "node_modules"],
-    "provenance_field": "source_marketplace"
+    "origin_field": "source_marketplace"
   }
 }

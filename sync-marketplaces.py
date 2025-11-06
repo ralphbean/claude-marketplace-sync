@@ -3,7 +3,7 @@
 Claude Code Marketplace Aggregator
 
 Recursively syncs plugins from multiple child marketplaces into a parent marketplace,
-with support for denylisting specific skills and tracking provenance.
+with support for denylisting specific skills and tracking origin.
 
 Usage:
     python sync-marketplaces.py [--config .sync-config.json] [--output .claude-plugin/marketplace.json]
@@ -32,7 +32,7 @@ class MarketplaceAggregator:
         self.temp_dir = None
         self.processed_marketplaces: Set[str] = set()
         self.all_plugins: List[Dict] = []
-        self.provenance_map: Dict[str, List[str]] = {}  # plugin_name -> [marketplace_chain]
+        self.origin_map: Dict[str, List[str]] = {}  # plugin_name -> [marketplace_chain]
 
         # Load configuration
         with open(self.config_path) as f:
@@ -118,12 +118,12 @@ class MarketplaceAggregator:
                 self.log(f"  Skipping denylisted plugin: {plugin_name}")
                 continue
 
-            # Add provenance
+            # Add origin
             plugin_copy = plugin.copy()
-            provenance_field = self.config.get("sync_settings", {}).get(
-                "provenance_field", "source_marketplace"
+            origin_field = self.config.get("sync_settings", {}).get(
+                "origin_field", "source_marketplace"
             )
-            plugin_copy[provenance_field] = "/".join(new_parent_chain)
+            plugin_copy[origin_field] = "/".join(new_parent_chain)
 
             # Convert local source paths to remote URLs
             if "source" in plugin_copy and plugin_copy["source"].startswith("./"):
@@ -132,10 +132,10 @@ class MarketplaceAggregator:
                 # Create remote URL pointing to the source marketplace
                 plugin_copy["source"] = f"{url}/tree/{branch}/{local_path}"
 
-            # Track provenance
-            if plugin_name not in self.provenance_map:
-                self.provenance_map[plugin_name] = []
-            self.provenance_map[plugin_name].append("/".join(new_parent_chain))
+            # Track origin
+            if plugin_name not in self.origin_map:
+                self.origin_map[plugin_name] = []
+            self.origin_map[plugin_name].append("/".join(new_parent_chain))
 
             self.log(f"  Adding plugin: {plugin_name} (from {'/'.join(new_parent_chain)})")
             self.all_plugins.append(plugin_copy)
@@ -180,8 +180,8 @@ class MarketplaceAggregator:
         version = self._extract_version_from_skill(target / "SKILL.md")
 
         # Create plugin entry
-        provenance_field = self.config.get("sync_settings", {}).get(
-            "provenance_field", "source_marketplace"
+        origin_field = self.config.get("sync_settings", {}).get(
+            "origin_field", "source_marketplace"
         )
         plugin_entry = {
             "name": name,
@@ -189,7 +189,7 @@ class MarketplaceAggregator:
             "version": version,
             "source": f"./{target_path}",
             "category": source.get("category", "skills"),
-            provenance_field: "/".join(parent_chain) if parent_chain else "direct",
+            origin_field: "/".join(parent_chain) if parent_chain else "direct",
         }
 
         self.all_plugins.append(plugin_entry)
@@ -263,10 +263,10 @@ class MarketplaceAggregator:
         """Generate the final marketplace.json file."""
         marketplace_config = self.config.get("marketplace", {})
 
-        # Deduplicate plugins and merge provenance
+        # Deduplicate plugins and merge origin
         seen_plugins = {}  # name -> plugin dict
-        provenance_field = self.config.get("sync_settings", {}).get(
-            "provenance_field", "source_marketplace"
+        origin_field = self.config.get("sync_settings", {}).get(
+            "origin_field", "source_marketplace"
         )
 
         for plugin in self.all_plugins:
@@ -275,20 +275,20 @@ class MarketplaceAggregator:
                 # First occurrence - keep it
                 seen_plugins[name] = plugin
             else:
-                # Duplicate - merge provenance information
+                # Duplicate - merge origin information
                 self.log(
-                    f"Duplicate plugin '{name}' found, merging provenance from: {plugin.get(provenance_field, 'unknown')}"
+                    f"Duplicate plugin '{name}' found, merging origin from: {plugin.get(origin_field, 'unknown')}"
                 )
 
-                # Get existing provenance (convert to list if string)
-                existing = seen_plugins[name].get(provenance_field)
+                # Get existing origin (convert to list if string)
+                existing = seen_plugins[name].get(origin_field)
                 if isinstance(existing, str):
                     existing = [existing]
                 elif existing is None:
                     existing = []
 
-                # Get new provenance (convert to list if string)
-                new = plugin.get(provenance_field)
+                # Get new origin (convert to list if string)
+                new = plugin.get(origin_field)
                 if isinstance(new, str):
                     new = [new]
                 elif new is None:
@@ -296,7 +296,7 @@ class MarketplaceAggregator:
 
                 # Merge and sort for consistency
                 merged = sorted(set(existing + new))
-                seen_plugins[name][provenance_field] = merged
+                seen_plugins[name][origin_field] = merged
 
         unique_plugins = list(seen_plugins.values())
 
@@ -328,9 +328,9 @@ class MarketplaceAggregator:
         print(f"Total marketplaces processed: {len(self.processed_marketplaces)}")
         print(f"Output: {self.output_path}")
 
-        if self.provenance_map:
-            print("\n=== Provenance Summary ===")
-            for plugin_name, sources in sorted(self.provenance_map.items()):
+        if self.origin_map:
+            print("\n=== Origin Summary ===")
+            for plugin_name, sources in sorted(self.origin_map.items()):
                 print(f"  {plugin_name}: {', '.join(sources)}")
 
 

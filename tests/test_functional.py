@@ -65,11 +65,11 @@ class TestEndToEndSync:
             assert "version" in plugin
             assert "source" in plugin
 
-        # All plugins should have provenance field
-        provenance_field = "source_marketplace"
+        # All plugins should have origin field
+        origin_field = "source_marketplace"
         for plugin in marketplace["plugins"]:
-            assert provenance_field in plugin
-            assert plugin[provenance_field] == "ralphbean"
+            assert origin_field in plugin
+            assert plugin[origin_field] == "ralphbean"
 
         print(f"\nSynced {len(marketplace['plugins'])} plugins from ralphbean's marketplace")
 
@@ -96,7 +96,7 @@ class TestEndToEndSync:
             ],
             "sync_settings": {
                 "exclude_patterns": [".git", ".github"],
-                "provenance_field": "origin",
+                "origin_field": "origin",
             },
         }
         config_file.write_text(json.dumps(config_data, indent=2))
@@ -119,7 +119,7 @@ class TestEndToEndSync:
         assert marketplace["version"] == "2.0.0"
         assert len(marketplace["plugins"]) > 0
 
-        # Check custom provenance field
+        # Check custom origin field
         for plugin in marketplace["plugins"]:
             assert "origin" in plugin
             assert plugin["origin"] == "ralphbean-custom"
@@ -139,7 +139,7 @@ class TestEndToEndSync:
                     "denylist": [],
                 }
             ],
-            "sync_settings": {"provenance_field": "source_marketplace"},
+            "sync_settings": {"origin_field": "source_marketplace"},
         }
         config_file_full.write_text(json.dumps(config_full, indent=2))
 
@@ -169,7 +169,7 @@ class TestEndToEndSync:
                         "denylist": [plugin_to_block],
                     }
                 ],
-                "sync_settings": {"provenance_field": "source_marketplace"},
+                "sync_settings": {"origin_field": "source_marketplace"},
             }
             config_file_filtered.write_text(json.dumps(config_filtered, indent=2))
 
@@ -189,8 +189,8 @@ class TestEndToEndSync:
             # Should have one fewer plugin
             assert len(marketplace_filtered["plugins"]) == len(marketplace_full["plugins"]) - 1
 
-    def test_provenance_tracking(self, tmp_path):
-        """Test that provenance is properly tracked."""
+    def test_origin_tracking(self, tmp_path):
+        """Test that origin is properly tracked."""
         config_file = tmp_path / "config.json"
         config_data = {
             "version": "1.0",
@@ -203,23 +203,23 @@ class TestEndToEndSync:
                     "tag_prefix": "ralphbean-test",
                 }
             ],
-            "sync_settings": {"provenance_field": "source_marketplace"},
+            "sync_settings": {"origin_field": "source_marketplace"},
         }
         config_file.write_text(json.dumps(config_data, indent=2))
 
         output_file = tmp_path / "marketplace.json"
 
-        # Run with verbose to capture provenance summary
+        # Run with verbose to capture origin summary
         aggregator = MarketplaceAggregator(str(config_file), str(output_file), verbose=True)
         result = aggregator.run()
 
         assert result == 0
 
-        # Verify provenance tracking
-        assert len(aggregator.provenance_map) > 0
+        # Verify origin tracking
+        assert len(aggregator.origin_map) > 0
 
         # All entries should map to ralphbean-test
-        for plugin_name, sources in aggregator.provenance_map.items():
+        for plugin_name, sources in aggregator.origin_map.items():
             assert len(sources) > 0
             assert "ralphbean-test" in sources[0]
 
@@ -246,7 +246,7 @@ class TestEndToEndSync:
                     "tag_prefix": "source-a",
                 }
             ],
-            "sync_settings": {"provenance_field": "source_marketplace"},
+            "sync_settings": {"origin_field": "source_marketplace"},
         }
         config_file.write_text(json.dumps(config_data, indent=2))
 
@@ -277,7 +277,7 @@ class TestEndToEndSync:
         assert plugin_names.count("plugin-c") == 1
 
         # Verify first occurrence is kept (version 1.0.0 for plugin-a)
-        # and provenance from both sources is merged (sorted)
+        # and origin from both sources is merged (sorted)
         plugin_a = [p for p in marketplace["plugins"] if p["name"] == "plugin-a"][0]
         assert plugin_a["version"] == "1.0.0"
         assert plugin_a["source_marketplace"] == ["source-1", "source-2"]

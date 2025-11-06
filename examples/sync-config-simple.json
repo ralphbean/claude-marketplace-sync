@@ -27,6 +27,6 @@
   ],
   "sync_settings": {
     "exclude_patterns": [".git", ".github", "node_modules", ".DS_Store"],
-    "provenance_field": "source_marketplace"
+    "origin_field": "source_marketplace"
   }
 }

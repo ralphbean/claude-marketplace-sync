@@ -11,7 +11,7 @@ A tool for creating hierarchical Claude Code marketplaces through distributed co
 - [Using as a GitHub Action](#using-as-a-github-action)
 - [CI/CD Integration](#cicd-integration)
 - [Example Hierarchies](#example-hierarchies)
-- [Provenance Tracking](#provenance-tracking)
+- [Origin Tracking](#origin-tracking)
 
 ## Overview
 
@@ -38,7 +38,7 @@ This tool enables **distributed marketplace composition**:
 1. Each marketplace maintains a `.sync-config.json` declaring its immediate children
 2. A script aggregates all plugins from child marketplaces
 3. Denylisting allows curators to exclude specific plugins
-4. Provenance metadata tracks where each plugin came from
+4. Origin metadata tracks where each plugin came from
 5. When each level runs this tool, you get recursive composition
 
 **Key insight:** Each marketplace only manages its direct children, but the recursive application creates an arbitrarily deep hierarchy.
@@ -103,7 +103,7 @@ Result: `engineering-marketplace` contains 2 plugins (1 from Platform Team + 1 d
 ```
 Result: `enterprise-marketplace` contains all plugins from both trees
 
-### Provenance Tracking
+### Origin Tracking
 
 Each plugin gets tagged with its source path:
 
@@ -156,7 +156,7 @@ This allows users to:
   ],
   "sync_settings": {
     "exclude_patterns": [".git", ".github", "node_modules"],
-    "provenance_field": "source_marketplace"
+    "origin_field": "source_marketplace"
   }
 }
 ```
@@ -180,7 +180,7 @@ Pulls all plugins from a child marketplace:
 - **url**: Git repository URL (GitHub, GitLab, or any git URL)
 - **branch**: Branch to clone (default: "main")
 - **denylist**: Array of plugin names to exclude
-- **tag_prefix**: Prefix for provenance tracking
+- **tag_prefix**: Prefix for origin tracking
 
 #### Skill Source
 
@@ -209,13 +209,13 @@ Adds a single skill directly:
 {
   "sync_settings": {
     "exclude_patterns": [".git", ".github", "node_modules", "__pycache__"],
-    "provenance_field": "source_marketplace"
+    "origin_field": "source_marketplace"
   }
 }
 ```
 
 - **exclude_patterns**: Files/directories to exclude when copying skills
-- **provenance_field**: Field name for tracking plugin source (appears in marketplace.json)
+- **origin_field**: Field name for tracking plugin source (appears in marketplace.json)
 
 ## Usage
 
@@ -535,7 +535,7 @@ curl -X POST \
 
 Users can subscribe to:
 - `company/engineering-marketplace` (2 plugins)
-- `company/company-marketplace` (same 2 plugins, with provenance)
+- `company/company-marketplace` (same 2 plugins, with origin)
 
 ### Example 2: Enterprise Multi-Department Hierarchy
 
@@ -599,7 +599,7 @@ Users can subscribe at any level:
 - `enterprise/platform-team-marketplace` (2 plugins)
 - `enterprise/engineering-marketplace` (3 plugins)
 - `enterprise/operations-marketplace` (2 plugins)
-- `enterprise/enterprise-marketplace` (4 plugins, all tagged with provenance)
+- `enterprise/enterprise-marketplace` (4 plugins, all tagged with origin)
 
 ### Example 3: Upstream + Downstream Pattern
 
@@ -682,7 +682,7 @@ Result: Plugins from both marketplaces (minus denylisted ones) + 2 local plugins
 - **Preservation**: Your local plugins are preserved alongside synced content
 - **Curation**: Use denylists to cherry-pick from upstream marketplaces
 - **Flexibility**: Mix stable upstream plugins with experimental local work
-- **Provenance**: Synced plugins tagged with source, local plugins tagged as "direct"
+- **Origin**: Synced plugins tagged with source, local plugins tagged as "direct"
 - **Evolution**: Move local plugins to upstream marketplaces as they mature
 
 This pattern is ideal for:
@@ -692,9 +692,9 @@ This pattern is ideal for:
 
 See [examples/sync-config-mixed-sources.json](examples/sync-config-mixed-sources.json) for a complete example.
 
-## Provenance Tracking
+## Origin Tracking
 
-Every plugin gets a `source_marketplace` field (configurable via `provenance_field`):
+Every plugin gets a `source_marketplace` field (configurable via `origin_field`):
 
 ```json
 {
@@ -707,16 +707,16 @@ Every plugin gets a `source_marketplace` field (configurable via `provenance_fie
 }
 ```
 
-### Use Cases for Provenance
+### Use Cases for Origin
 
 1. **Trust Decisions**: Users can see the chain of custody
 2. **Filtering**: Filter plugins by organization
 3. **Debugging**: Trace where a plugin came from
 4. **Auditing**: Track which department/team owns which plugins
 
-### Provenance Format
+### Origin Format
 
-The provenance chain is built from `tag_prefix` values:
+The origin chain is built from `tag_prefix` values:
 
 ```
 root_marketplace / child_marketplace / grandchild_marketplace
@@ -765,7 +765,7 @@ See the example configurations and CI/CD templates:
 4. **Users**:
    - Can subscribe directly to their team's marketplace
    - OR subscribe to department/org marketplace for broader access
-   - All plugins tagged with provenance for transparency
+   - All plugins tagged with origin for transparency
 
 ### Maintenance
 
@@ -794,7 +794,7 @@ This distributes maintenance burden and enables autonomous teams.
 2. Duplicate plugin name - first occurrence wins
 3. Child marketplace hasn't been synced yet
 
-### Provenance shows wrong path
+### Origin shows wrong path
 
 **Check**:
 - `tag_prefix` in source configuration
@@ -805,7 +805,7 @@ This distributes maintenance burden and enables autonomous teams.
 Contributions welcome! This tool is designed to be:
 - Platform-agnostic (GitHub, GitLab, any git)
 - Flexible (skills and marketplaces)
-- Transparent (provenance tracking)
+- Transparent (origin tracking)
 
 If you find bugs or have feature requests, please open an issue.
 
