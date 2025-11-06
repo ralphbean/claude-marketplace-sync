@@ -284,14 +284,78 @@ See [github/workflows/sync-marketplaces.yml](github/workflows/sync-marketplaces.
 
 ### GitLab CI/CD
 
-Create `.gitlab-ci.yml` or include the template:
+The GitLab CI/CD template is designed to be included and extended in your existing `.gitlab-ci.yml` file.
+
+#### Basic Usage
+
+Include the remote template and extend it to control when it runs:
+
+```yaml
+include:
+  - remote: 'https://raw.githubusercontent.com/ralphbean/claude-marketplace-sync/main/gitlab/gitlab-ci.yml'
+
+sync-marketplaces:
+  extends: .sync-marketplaces-template
+  only:
+    - main  # Only run on main branch
+```
+
+#### Advanced Usage
+
+Customize variables, add pre-processing steps, and control execution:
+
+```yaml
+include:
+  - remote: 'https://raw.githubusercontent.com/ralphbean/claude-marketplace-sync/main/gitlab/gitlab-ci.yml'
+
+sync-marketplaces:
+  extends: .sync-marketplaces-template
+  variables:
+    SYNC_CONFIG: ".my-custom-config.json"
+    OUTPUT_FILE: ".claude-plugin/my-marketplace.json"
+    VERBOSE: "true"
+  before_script:
+    # Include the template's before_script commands
+    - !reference [.sync-marketplaces-template, before_script]
+    # Add your custom setup
+    - echo "Running custom pre-sync validation"
+    - ./scripts/validate-sources.sh
+  only:
+    - main
+    - develop
+```
+
+#### Local Development
+
+For testing in your repository before using the remote template:
 
 ```yaml
 include:
   - local: 'gitlab/gitlab-ci.yml'
+
+sync-marketplaces:
+  extends: .sync-marketplaces-template
+  only:
+    - main
 ```
 
-See [gitlab/gitlab-ci.yml](gitlab/gitlab-ci.yml) for the full template.
+#### Customization Options
+
+The template provides these configurable variables:
+
+- **SYNC_CONFIG**: Path to sync configuration file (default: `.sync-config.json`)
+- **OUTPUT_FILE**: Path to output marketplace.json (default: `.claude-plugin/marketplace.json`)
+- **VERBOSE**: Enable verbose logging (default: `false`, set to `true` to enable)
+- **GIT_DEPTH**: Git clone depth (default: `0` for full history)
+
+The template runs by default on:
+- Scheduled pipelines (configure in GitLab CI/CD > Schedules)
+- Manual web triggers
+- API/trigger token triggers
+
+Override these with your own `only:`, `except:`, or `rules:` configuration.
+
+See [gitlab/gitlab-ci.yml](gitlab/gitlab-ci.yml) for the full template source.
 
 ### Triggering Child Updates
 

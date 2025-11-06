@@ -1,18 +1,54 @@
 # GitLab CI/CD template for syncing Claude Code marketplaces
 #
-# Add this to your .gitlab-ci.yml or include it:
+# This is a reusable template that can be included in your .gitlab-ci.yml file.
+#
+# USAGE:
+#
+# Basic usage (include and extend):
 #   include:
-#     - local: 'examples/gitlab-ci-sync.yml'
+#     - remote: 'https://raw.githubusercontent.com/ralphbean/claude-marketplace-sync/main/gitlab/gitlab-ci.yml'
+#
+#   sync-marketplaces:
+#     extends: .sync-marketplaces-template
+#     only:
+#       - main
+#
+# Advanced usage (with customizations):
+#   include:
+#     - remote: 'https://raw.githubusercontent.com/ralphbean/claude-marketplace-sync/main/gitlab/gitlab-ci.yml'
+#
+#   sync-marketplaces:
+#     extends: .sync-marketplaces-template
+#     variables:
+#       SYNC_CONFIG: ".my-custom-config.json"
+#       OUTPUT_FILE: ".claude-plugin/my-marketplace.json"
+#       VERBOSE: "true"
+#     before_script:
+#       - !reference [.sync-marketplaces-template, before_script]
+#       - echo "Running custom setup commands"
+#     only:
+#       - main
+#       - develop
+#
+# For local development/testing, use a local path:
+#   include:
+#     - local: 'gitlab/gitlab-ci.yml'
 
-variables:
-  SYNC_CONFIG: ".sync-config.json"
-  OUTPUT_FILE: ".claude-plugin/marketplace.json"
-  GIT_DEPTH: 0
-
-sync-marketplaces:
+# Hidden template job (prefix with . to make it abstract)
+# Users should extend this in their own .gitlab-ci.yml
+.sync-marketplaces-template:
   image: python:3.11-slim
   stage: deploy
 
+  # Default variables - can be overridden by extending jobs
+  variables:
+    SYNC_CONFIG: ".sync-config.json"
+    OUTPUT_FILE: ".claude-plugin/marketplace.json"
+    GIT_DEPTH: 0
+    VERBOSE: "false"
+
+  # Default rules - can be overridden by extending jobs
+  # These provide sensible defaults but let users control via 'only:', 'except:', etc.
   rules:
     # Run on schedule (configure in GitLab CI/CD > Schedules)
     - if: $CI_PIPELINE_SOURCE == "schedule"
@@ -23,7 +59,9 @@ sync-marketplaces:
     - if: $CI_PIPELINE_SOURCE == "trigger"
 
   before_script:
+    # Install dependencies
     - apt-get update && apt-get install -y git
+    # Configure git for commits
     - git config --global user.name "GitLab CI/CD Bot"
     - git config --global user.email "cicd@gitlab.com"
 
@@ -62,10 +100,6 @@ sync-marketplaces:
       git push origin HEAD:${CI_COMMIT_REF_NAME}
 
     - echo "✓ Marketplace updated and pushed to $CI_COMMIT_REF_NAME"
-
-  only:
-    variables:
-      - $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
 
   artifacts:
     paths:
