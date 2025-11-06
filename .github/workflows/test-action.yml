@@ -32,11 +32,13 @@ jobs:
             },
             "sources": [
               {
-                "type": "marketplace",
-                "url": "https://github.com/chmouel-cc-plugins/superpowers",
+                "type": "skill",
+                "name": "test-skill",
+                "description": "Test skill for validation",
+                "url": "https://github.com/ralphbean/claude-marketplace-sync",
                 "branch": "main",
-                "denylist": [],
-                "tag_prefix": "superpowers"
+                "category": "testing",
+                "target_path": "skills/test-skill"
               }
             ],
             "sync_settings": {
@@ -67,6 +69,12 @@ jobs:
 
           if ! [[ "${{ steps.sync.outputs.marketplaces-processed }}" =~ ^[0-9]+$ ]]; then
             echo "::error::marketplaces-processed is not a number"
+            exit 1
+          fi
+
+          # Verify we got at least 1 plugin (the test skill)
+          if [ "${{ steps.sync.outputs.plugins-count }}" -lt 1 ]; then
+            echo "::error::Expected at least 1 plugin, got ${{ steps.sync.outputs.plugins-count }}"
             exit 1
           fi
 
