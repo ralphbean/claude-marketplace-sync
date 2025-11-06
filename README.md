@@ -8,6 +8,7 @@ A tool for creating hierarchical Claude Code marketplaces through distributed co
 - [How It Works](#how-it-works)
 - [Configuration](#configuration)
 - [Usage](#usage)
+- [Using as a GitHub Action](#using-as-a-github-action)
 - [CI/CD Integration](#cicd-integration)
 - [Example Hierarchies](#example-hierarchies)
 - [Provenance Tracking](#provenance-tracking)
@@ -241,6 +242,125 @@ optional arguments:
   --config CONFIG  Path to sync configuration file (default: .sync-config.json)
   --output OUTPUT  Path to output marketplace.json file (default: .claude-plugin/marketplace.json)
   -v, --verbose    Enable verbose logging
+```
+
+## Using as a GitHub Action
+
+This repository provides a **reusable GitHub Action** that allows you to sync marketplaces in any repository without installing the script manually.
+
+### What is a GitHub Action?
+
+A GitHub Action is a reusable component that can be used in any repository's workflow. Instead of copying the `sync-marketplaces.py` script into every repository, you can simply reference this action in your workflow.
+
+### Basic Usage
+
+Create a workflow file in your repository (e.g., `.github/workflows/sync-marketplaces.yml`):
+
+```yaml
+name: Sync Marketplaces
+on:
+  schedule:
+    - cron: '0 2 * * 1'  # Weekly on Monday 2 AM UTC
+  workflow_dispatch:  # Allow manual trigger
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Sync marketplaces
+        uses: ralphbean/claude-marketplace-sync@main
+        with:
+          config-path: '.sync-config.json'
+          verbose: 'true'
+
+      - name: Commit changes
+        run: |
+          git config user.name "GitHub Actions"
+          git config user.email "actions@github.com"
+          git add .claude-plugin/marketplace.json
+          git diff --staged --quiet || git commit -m "chore: sync marketplaces"
+          git push
+```
+
+### Action Inputs
+
+| Input | Description | Required | Default |
+|-------|-------------|----------|---------|
+| `config-path` | Path to sync configuration file | No | `.sync-config.json` |
+| `output-path` | Path to output marketplace.json | No | `.claude-plugin/marketplace.json` |
+| `verbose` | Enable verbose logging | No | `false` |
+
+### Action Outputs
+
+| Output | Description |
+|--------|-------------|
+| `plugins-count` | Number of plugins synced |
+| `marketplaces-processed` | Number of marketplaces processed |
+
+### Advanced Usage with Outputs
+
+You can use the action's outputs in subsequent steps:
+
+```yaml
+- name: Sync marketplaces
+  id: sync
+  uses: ralphbean/claude-marketplace-sync@main
+  with:
+    config-path: '.my-config.json'
+    output-path: '.claude-plugin/marketplace.json'
+    verbose: 'true'
+
+- name: Report results
+  run: |
+    echo "Synced ${{ steps.sync.outputs.plugins-count }} plugins"
+    echo "Processed ${{ steps.sync.outputs.marketplaces-processed }} marketplaces"
+
+- name: Create summary
+  run: |
+    echo "## Marketplace Sync Results" >> $GITHUB_STEP_SUMMARY
+    echo "- Plugins: ${{ steps.sync.outputs.plugins-count }}" >> $GITHUB_STEP_SUMMARY
+    echo "- Marketplaces: ${{ steps.sync.outputs.marketplaces-processed }}" >> $GITHUB_STEP_SUMMARY
+```
+
+### Using a Specific Version
+
+For production use, it's recommended to pin to a specific version or tag:
+
+```yaml
+- uses: ralphbean/claude-marketplace-sync@v1.0.0
+```
+
+Or use a commit SHA for maximum stability:
+
+```yaml
+- uses: ralphbean/claude-marketplace-sync@abc123def456...
+```
+
+### Triggering from Child Marketplaces
+
+Configure child marketplaces to notify your marketplace when they update by adding this to their workflow:
+
+```yaml
+- name: Notify parent marketplace
+  if: success()
+  run: |
+    curl -X POST \
+      -H "Authorization: token ${{ secrets.PARENT_REPO_TOKEN }}" \
+      -H "Accept: application/vnd.github.v3+json" \
+      https://api.github.com/repos/your-org/parent-marketplace/dispatches \
+      -d '{"event_type":"marketplace-updated"}'
+```
+
+Then in your parent marketplace workflow, listen for the dispatch:
+
+```yaml
+on:
+  repository_dispatch:
+    types: [marketplace-updated]
+  schedule:
+    - cron: '0 2 * * 1'
 ```
 
 ## CI/CD Integration

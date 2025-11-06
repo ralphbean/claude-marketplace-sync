@@ -1,0 +1,95 @@
+name: 'Claude Marketplace Sync'
+description: 'Sync plugins from multiple Claude Code marketplaces into a single marketplace'
+author: 'Ralph Bean'
+
+branding:
+  icon: 'download-cloud'
+  color: 'blue'
+
+inputs:
+  config-path:
+    description: 'Path to sync configuration file'
+    required: false
+    default: '.sync-config.json'
+  output-path:
+    description: 'Path to output marketplace.json file'
+    required: false
+    default: '.claude-plugin/marketplace.json'
+  verbose:
+    description: 'Enable verbose logging'
+    required: false
+    default: 'false'
+
+outputs:
+  plugins-count:
+    description: 'Number of plugins synced'
+    value: ${{ steps.sync.outputs.plugins-count }}
+  marketplaces-processed:
+    description: 'Number of marketplaces processed'
+    value: ${{ steps.sync.outputs.marketplaces-processed }}
+
+runs:
+  using: 'composite'
+  steps:
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+
+    - name: Run marketplace sync
+      id: sync
+      shell: bash
+      run: |
+        # Determine verbose flag
+        if [[ "${{ inputs.verbose }}" == "true" ]]; then
+          VERBOSE_FLAG="--verbose"
+        else
+          VERBOSE_FLAG=""
+        fi
+
+        # Get action path and normalize
+        ACTION_PATH="${{ github.action_path }}"
+        # Remove trailing slash if present
+        ACTION_PATH="${ACTION_PATH%/}"
+
+        # Create temp file for output
+        TEMP_OUTPUT=$(mktemp)
+
+        # Run the sync script and capture output to file
+        set +e  # Don't exit on error
+        python3 "${ACTION_PATH}/sync-marketplaces.py" \
+          --config "${{ inputs.config-path }}" \
+          --output "${{ inputs.output-path }}" \
+          $VERBOSE_FLAG 2>&1 | tee "$TEMP_OUTPUT"
+
+        EXIT_CODE=${PIPESTATUS[0]}
+        set -e  # Re-enable exit on error
+
+        # Exit if sync failed
+        if [ $EXIT_CODE -ne 0 ]; then
+          echo "::error::Marketplace sync failed with exit code $EXIT_CODE"
+          rm -f "$TEMP_OUTPUT"
+          exit $EXIT_CODE
+        fi
+
+        # Parse output for plugin count
+        PLUGINS_COUNT=$(grep "Total plugins:" "$TEMP_OUTPUT" | sed -E 's/.*Total plugins: ([0-9]+).*/\1/' || echo "0")
+        if [ -z "$PLUGINS_COUNT" ]; then
+          PLUGINS_COUNT="0"
+        fi
+
+        # Parse output for marketplaces processed
+        MARKETPLACES_COUNT=$(grep "Total marketplaces processed:" "$TEMP_OUTPUT" | sed -E 's/.*Total marketplaces processed: ([0-9]+).*/\1/' || echo "0")
+        if [ -z "$MARKETPLACES_COUNT" ]; then
+          MARKETPLACES_COUNT="0"
+        fi
+
+        # Clean up
+        rm -f "$TEMP_OUTPUT"
+
+        # Set outputs
+        echo "plugins-count=$PLUGINS_COUNT" >> $GITHUB_OUTPUT
+        echo "marketplaces-processed=$MARKETPLACES_COUNT" >> $GITHUB_OUTPUT
+
+        # Display results
+        echo "::notice::Synced $PLUGINS_COUNT plugins from $MARKETPLACES_COUNT marketplaces"

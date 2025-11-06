@@ -1,0 +1,110 @@
+name: Test Action
+
+on:
+  push:
+    branches:
+      - feature/create-github-action
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+jobs:
+  test-action:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Create test config
+        run: |
+          cat > test-config.json << 'EOF'
+          {
+            "version": "1.0",
+            "marketplace": {
+              "name": "test-marketplace",
+              "version": "1.0.0",
+              "description": "Test marketplace for action validation",
+              "owner": {
+                "name": "Test User",
+                "email": "test@example.com"
+              }
+            },
+            "sources": [
+              {
+                "type": "skill",
+                "name": "test-skill",
+                "description": "Test skill for validation",
+                "url": "https://github.com/ralphbean/claude-marketplace-sync",
+                "branch": "main",
+                "category": "testing",
+                "target_path": "skills/test-skill"
+              }
+            ],
+            "sync_settings": {
+              "exclude_patterns": [".git", ".github"],
+              "provenance_field": "source_marketplace"
+            }
+          }
+          EOF
+
+      - name: Test marketplace sync action
+        id: sync
+        uses: ./
+        with:
+          config-path: 'test-config.json'
+          output-path: 'test-output/marketplace.json'
+          verbose: 'true'
+
+      - name: Verify outputs
+        run: |
+          echo "Plugins synced: ${{ steps.sync.outputs.plugins-count }}"
+          echo "Marketplaces processed: ${{ steps.sync.outputs.marketplaces-processed }}"
+
+          # Verify outputs are numbers
+          if ! [[ "${{ steps.sync.outputs.plugins-count }}" =~ ^[0-9]+$ ]]; then
+            echo "::error::plugins-count is not a number"
+            exit 1
+          fi
+
+          if ! [[ "${{ steps.sync.outputs.marketplaces-processed }}" =~ ^[0-9]+$ ]]; then
+            echo "::error::marketplaces-processed is not a number"
+            exit 1
+          fi
+
+          # Verify we got at least 1 plugin (the test skill)
+          if [ "${{ steps.sync.outputs.plugins-count }}" -lt 1 ]; then
+            echo "::error::Expected at least 1 plugin, got ${{ steps.sync.outputs.plugins-count }}"
+            exit 1
+          fi
+
+          echo "::notice::Action test passed successfully!"
+
+      - name: Verify marketplace.json exists
+        run: |
+          if [ ! -f "test-output/marketplace.json" ]; then
+            echo "::error::marketplace.json was not created"
+            exit 1
+          fi
+
+          echo "::notice::marketplace.json created successfully"
+
+      - name: Display marketplace contents
+        run: |
+          echo "Generated marketplace.json:"
+          cat test-output/marketplace.json | jq '.'
+
+      - name: Verify marketplace structure
+        run: |
+          # Check that the marketplace has required fields
+          jq -e '.name' test-output/marketplace.json > /dev/null || (echo "::error::Missing 'name' field" && exit 1)
+          jq -e '.version' test-output/marketplace.json > /dev/null || (echo "::error::Missing 'version' field" && exit 1)
+          jq -e '.plugins' test-output/marketplace.json > /dev/null || (echo "::error::Missing 'plugins' field" && exit 1)
+
+          # Check that plugins have provenance
+          PLUGIN_COUNT=$(jq '.plugins | length' test-output/marketplace.json)
+          if [ "$PLUGIN_COUNT" -gt 0 ]; then
+            jq -e '.plugins[0].source_marketplace' test-output/marketplace.json > /dev/null || (echo "::error::Plugins missing provenance field" && exit 1)
+          fi
+
+          echo "::notice::Marketplace structure validation passed!"
