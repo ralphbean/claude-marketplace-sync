@@ -622,6 +622,68 @@ Users can subscribe at any level:
 ```
 Result: 3 plugins (2 from upstream + 1 internal)
 
+### Example 4: Personal Marketplace with Mixed Sources
+
+A powerful pattern is to create a personal marketplace that combines:
+- Curated selections from multiple upstream marketplaces (using denylists)
+- Your own custom/experimental plugins that aren't published elsewhere
+- Project-specific helpers that are works-in-progress
+
+**Personal Marketplace** (mixing marketplace and skill sources):
+```json
+{
+  "marketplace": {
+    "name": "personal-marketplace",
+    "description": "My personal collection of plugins"
+  },
+  "sources": [
+    {
+      "type": "marketplace",
+      "url": "https://github.com/superpowers/superpowers-marketplace",
+      "tag_prefix": "superpowers",
+      "denylist": ["skill-i-dont-need", "another-unwanted-skill"]
+    },
+    {
+      "type": "marketplace",
+      "url": "https://github.com/company/internal-marketplace",
+      "tag_prefix": "company"
+    },
+    {
+      "type": "skill",
+      "name": "my-custom-workflow",
+      "description": "My personal productivity workflow",
+      "url": "https://github.com/me/custom-workflow",
+      "category": "productivity",
+      "target_path": "skills/my-custom-workflow"
+    },
+    {
+      "type": "skill",
+      "name": "wip-project-helper",
+      "description": "Work-in-progress helper for current project",
+      "url": "https://github.com/me/project-helper",
+      "category": "development",
+      "target_path": "skills/wip-project-helper"
+    }
+  ]
+}
+```
+
+Result: Plugins from both marketplaces (minus denylisted ones) + 2 local plugins
+
+**Key Benefits:**
+- **Preservation**: Your local plugins are preserved alongside synced content
+- **Curation**: Use denylists to cherry-pick from upstream marketplaces
+- **Flexibility**: Mix stable upstream plugins with experimental local work
+- **Provenance**: Synced plugins tagged with source, local plugins tagged as "direct"
+- **Evolution**: Move local plugins to upstream marketplaces as they mature
+
+This pattern is ideal for:
+- Individual developers maintaining personal plugin collections
+- Teams testing new plugins before publishing to org marketplaces
+- Organizations mixing public and proprietary plugins
+
+See [examples/sync-config-mixed-sources.json](examples/sync-config-mixed-sources.json) for a complete example.
+
 ## Provenance Tracking
 
 Every plugin gets a `source_marketplace` field (configurable via `provenance_field`):
@@ -666,6 +728,7 @@ See the example configurations and CI/CD templates:
 - **[sync-config-simple.json](examples/sync-config-simple.json)** - Basic two-level hierarchy
 - **[sync-config-enterprise.json](examples/sync-config-enterprise.json)** - Multi-department enterprise example
 - **[sync-config-with-denylist.json](examples/sync-config-with-denylist.json)** - Curated marketplace with denylisting
+- **[sync-config-mixed-sources.json](examples/sync-config-mixed-sources.json)** - Personal marketplace mixing marketplace and skill sources
 
 ### CI/CD Templates
 

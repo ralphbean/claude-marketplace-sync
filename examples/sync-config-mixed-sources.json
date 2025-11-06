@@ -1,0 +1,57 @@
+{
+  "version": "1.0",
+  "marketplace": {
+    "name": "personal-marketplace",
+    "version": "1.0.0",
+    "description": "Personal marketplace combining local plugins with curated selections from other marketplaces",
+    "owner": {
+      "name": "John Developer",
+      "email": "john@example.com"
+    }
+  },
+  "sources": [
+    {
+      "type": "marketplace",
+      "url": "https://github.com/superpowers/superpowers-marketplace",
+      "branch": "main",
+      "denylist": [
+        "skill-we-dont-need",
+        "another-unwanted-skill"
+      ],
+      "tag_prefix": "superpowers",
+      "comment": "Pull selected plugins from the Superpowers marketplace while excluding some we don't need"
+    },
+    {
+      "type": "marketplace",
+      "url": "https://github.com/company/internal-marketplace",
+      "branch": "main",
+      "denylist": [],
+      "tag_prefix": "company",
+      "comment": "Include all plugins from company's internal marketplace"
+    },
+    {
+      "type": "skill",
+      "name": "my-custom-workflow",
+      "description": "My personal productivity workflow skill",
+      "url": "https://github.com/johndeveloper/custom-workflow",
+      "branch": "main",
+      "category": "productivity",
+      "target_path": "skills/my-custom-workflow",
+      "comment": "A skill I developed personally that isn't in any marketplace yet"
+    },
+    {
+      "type": "skill",
+      "name": "project-specific-helper",
+      "description": "Helper for my current project",
+      "url": "https://github.com/johndeveloper/project-helper",
+      "branch": "main",
+      "category": "development",
+      "target_path": "skills/project-specific-helper",
+      "comment": "A work-in-progress skill for my current project"
+    }
+  ],
+  "sync_settings": {
+    "exclude_patterns": [".git", ".github", "node_modules", ".DS_Store", "__pycache__"],
+    "provenance_field": "source_marketplace"
+  }
+}
