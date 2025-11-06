@@ -1,7 +1,12 @@
-.PHONY: help lint format test test-unit test-functional clean
+.PHONY: all help lint format test test-unit test-functional clean
+
+# Default target: run linting and all tests
+all: lint test
+	@echo "✓ All checks passed!"
 
 help:
 	@echo "Available targets:"
+	@echo "  make (or all)  - Run lint and all tests (default)"
 	@echo "  lint           - Check code formatting with black"
 	@echo "  format         - Auto-format code with black"
 	@echo "  test-unit      - Run unit tests only"
