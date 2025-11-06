@@ -263,19 +263,42 @@ class MarketplaceAggregator:
         """Generate the final marketplace.json file."""
         marketplace_config = self.config.get("marketplace", {})
 
-        # Deduplicate plugins (prefer first occurrence to respect priority)
-        seen_names = set()
-        unique_plugins = []
+        # Deduplicate plugins and merge provenance
+        seen_plugins = {}  # name -> plugin dict
+        provenance_field = self.config.get("sync_settings", {}).get(
+            "provenance_field", "source_marketplace"
+        )
 
         for plugin in self.all_plugins:
             name = plugin["name"]
-            if name not in seen_names:
-                seen_names.add(name)
-                unique_plugins.append(plugin)
+            if name not in seen_plugins:
+                # First occurrence - keep it
+                seen_plugins[name] = plugin
             else:
+                # Duplicate - merge provenance information
                 self.log(
-                    f"Duplicate plugin '{name}' found, keeping first occurrence from: {plugin.get('source_marketplace', 'unknown')}"
+                    f"Duplicate plugin '{name}' found, merging provenance from: {plugin.get(provenance_field, 'unknown')}"
                 )
+
+                # Get existing provenance (convert to list if string)
+                existing = seen_plugins[name].get(provenance_field)
+                if isinstance(existing, str):
+                    existing = [existing]
+                elif existing is None:
+                    existing = []
+
+                # Get new provenance (convert to list if string)
+                new = plugin.get(provenance_field)
+                if isinstance(new, str):
+                    new = [new]
+                elif new is None:
+                    new = []
+
+                # Merge and sort for consistency
+                merged = sorted(set(existing + new))
+                seen_plugins[name][provenance_field] = merged
+
+        unique_plugins = list(seen_plugins.values())
 
         # Build marketplace structure
         marketplace_data = {

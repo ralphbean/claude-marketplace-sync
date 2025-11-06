@@ -275,7 +275,8 @@ class TestGenerateMarketplace:
         assert len(result["plugins"]) == 2
         assert result["plugins"][0]["name"] == "plugin1"
         assert result["plugins"][0]["version"] == "1.0.0"  # First occurrence kept
-        assert result["plugins"][0]["source_marketplace"] == "marketplace-a"
+        # source_marketplace should be merged array (sorted alphabetically)
+        assert result["plugins"][0]["source_marketplace"] == ["marketplace-a", "marketplace-b"]
         assert result["plugins"][1]["name"] == "plugin2"
 
 
@@ -506,3 +507,79 @@ class TestSourceURLConversion:
         assert plugin["source"].startswith("https://")
         assert "upstream-marketplace" in plugin["source"]
         assert "test-plugin" in plugin["source"]
+
+
+class TestDiamondDependencyDeduplication:
+    """Test that diamond dependencies are properly deduplicated with merged provenance."""
+
+    def test_diamond_dependency_merges_provenance(self, tmp_path):
+        """Test that when a plugin appears in multiple marketplaces, provenance is merged into array."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text(
+            json.dumps(
+                {
+                    "marketplace": {"name": "test", "version": "1.0.0"},
+                    "sources": [],
+                }
+            )
+        )
+
+        aggregator = MarketplaceAggregator(str(config_file), str(tmp_path / "output.json"))
+        aggregator.temp_dir = tmp_path / "temp"
+        aggregator.temp_dir.mkdir()
+
+        # Mock _clone_repo to create two different marketplaces with the same plugin
+        call_count = [0]
+
+        def fake_clone(url, branch, target_dir):
+            call_count[0] += 1
+            target_dir.mkdir(parents=True, exist_ok=True)
+            plugin_dir = target_dir / ".claude-plugin"
+            plugin_dir.mkdir(parents=True, exist_ok=True)
+
+            # Both marketplaces have the same plugin
+            marketplace_json = plugin_dir / "marketplace.json"
+            marketplace_json.write_text(
+                json.dumps(
+                    {
+                        "plugins": [
+                            {
+                                "name": "shared-plugin",
+                                "description": "A plugin in both marketplaces",
+                                "version": "1.0.0",
+                                "source": "./plugins/shared-plugin",
+                                "category": "test",
+                            }
+                        ]
+                    }
+                )
+            )
+
+        aggregator._clone_repo = fake_clone
+
+        # Process two different marketplaces
+        aggregator._process_marketplace(
+            {"type": "marketplace", "url": "https://github.com/owner/marketplace-a", "branch": "main"},
+            parent_chain=[],
+        )
+        aggregator._process_marketplace(
+            {"type": "marketplace", "url": "https://github.com/owner/marketplace-b", "branch": "main"},
+            parent_chain=[],
+        )
+
+        # Generate the final marketplace
+        aggregator._generate_marketplace()
+
+        # Read the generated file
+        with open(aggregator.output_path) as f:
+            result = json.load(f)
+
+        # Should have exactly 1 plugin (deduplicated)
+        assert len(result["plugins"]) == 1
+        plugin = result["plugins"][0]
+        assert plugin["name"] == "shared-plugin"
+
+        # source_marketplace should be an array with both sources, sorted for consistency
+        assert isinstance(plugin["source_marketplace"], list)
+        assert len(plugin["source_marketplace"]) == 2
+        assert plugin["source_marketplace"] == ["marketplace-a", "marketplace-b"]  # Alphabetically sorted

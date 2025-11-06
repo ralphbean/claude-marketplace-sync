@@ -277,9 +277,10 @@ class TestEndToEndSync:
         assert plugin_names.count("plugin-c") == 1
 
         # Verify first occurrence is kept (version 1.0.0 for plugin-a)
+        # and provenance from both sources is merged (sorted)
         plugin_a = [p for p in marketplace["plugins"] if p["name"] == "plugin-a"][0]
         assert plugin_a["version"] == "1.0.0"
-        assert plugin_a["source_marketplace"] == "source-1"
+        assert plugin_a["source_marketplace"] == ["source-1", "source-2"]
 
 
 class TestErrorHandling:
