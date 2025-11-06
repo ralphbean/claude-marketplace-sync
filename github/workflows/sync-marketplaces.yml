@@ -24,66 +24,28 @@ jobs:
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GITHUB_TOKEN }}
-          fetch-depth: 0
 
-      - name: Set up Python
-        uses: actions/setup-python@v5
+      - name: Sync marketplaces
+        uses: ralphbean/claude-marketplace-sync@main
         with:
-          python-version: '3.11'
+          config-path: '.sync-config.json'
+          verbose: ${{ github.event.inputs.verbose || 'false' }}
 
-      - name: Configure Git
+      - name: Commit changes
         run: |
           git config user.name "GitHub Actions Bot"
           git config user.email "actions@github.com"
-
-      - name: Run marketplace sync
-        run: |
-          VERBOSE_FLAG=""
-          if [ "${{ github.event.inputs.verbose }}" == "true" ]; then
-            VERBOSE_FLAG="--verbose"
-          fi
-
-          python3 sync-marketplaces.py \
-            --config .sync-config.json \
-            --output .claude-plugin/marketplace.json \
-            $VERBOSE_FLAG
-
-      - name: Check for changes
-        id: changes
-        run: |
-          git add -A
+          git add .claude-plugin/marketplace.json
           if git diff --staged --quiet; then
-            echo "has_changes=false" >> $GITHUB_OUTPUT
-            echo "ℹ️  No changes detected"
+            echo "ℹ️  No changes to commit"
           else
-            echo "has_changes=true" >> $GITHUB_OUTPUT
-            echo "✓ Changes detected, will commit"
-            git diff --staged --stat
-          fi
+            TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            git commit -m "chore: sync marketplaces - $TIMESTAMP
 
-      - name: Commit and push changes
-        if: steps.changes.outputs.has_changes == 'true'
-        run: |
-          TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+            Automatically aggregated plugins from child marketplaces.
+            Triggered by: ${{ github.event_name }}
 
-          git commit -m "chore: sync marketplaces - $TIMESTAMP
-
-          Automatically aggregated plugins from child marketplaces.
-          Triggered by: ${{ github.event_name }}
-
-          See .sync-config.json for source configuration."
-
-          git push origin main
-          echo "✓ Changes committed and pushed to main"
-
-      - name: Summary
-        if: always()
-        run: |
-          echo "=== Marketplace Sync Complete ==="
-          if [ "${{ steps.changes.outputs.has_changes }}" == "true" ]; then
-            echo "✓ Marketplace updated with latest plugins"
-          else
-            echo "ℹ️  No updates needed - marketplace is up to date"
+            See .sync-config.json for source configuration."
+            git push
+            echo "✓ Changes committed and pushed"
           fi
