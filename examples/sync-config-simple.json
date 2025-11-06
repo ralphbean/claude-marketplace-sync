@@ -1,0 +1,32 @@
+{
+  "version": "1.0",
+  "marketplace": {
+    "name": "my-org-marketplace",
+    "version": "1.0.0",
+    "description": "Organization-wide Claude Code plugins",
+    "owner": {
+      "name": "My Organization",
+      "email": "plugins@myorg.com"
+    }
+  },
+  "sources": [
+    {
+      "type": "marketplace",
+      "url": "https://github.com/myorg/engineering-plugins",
+      "branch": "main",
+      "denylist": [],
+      "tag_prefix": "engineering"
+    },
+    {
+      "type": "marketplace",
+      "url": "https://github.com/myorg/product-plugins",
+      "branch": "main",
+      "denylist": [],
+      "tag_prefix": "product"
+    }
+  ],
+  "sync_settings": {
+    "exclude_patterns": [".git", ".github", "node_modules", ".DS_Store"],
+    "provenance_field": "source_marketplace"
+  }
+}

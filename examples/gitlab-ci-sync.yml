@@ -1,0 +1,77 @@
+# GitLab CI/CD template for syncing Claude Code marketplaces
+#
+# Add this to your .gitlab-ci.yml or include it:
+#   include:
+#     - local: 'examples/gitlab-ci-sync.yml'
+
+variables:
+  SYNC_CONFIG: ".sync-config.json"
+  OUTPUT_FILE: ".claude-plugin/marketplace.json"
+  GIT_DEPTH: 0
+
+sync-marketplaces:
+  image: python:3.11-slim
+  stage: deploy
+
+  rules:
+    # Run on schedule (configure in GitLab CI/CD > Schedules)
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    # Run on manual trigger
+    - if: $CI_PIPELINE_SOURCE == "web"
+      when: manual
+    # Run on API trigger (repository_dispatch equivalent)
+    - if: $CI_PIPELINE_SOURCE == "trigger"
+
+  before_script:
+    - apt-get update && apt-get install -y git
+    - git config --global user.name "GitLab CI/CD Bot"
+    - git config --global user.email "cicd@gitlab.com"
+
+  script:
+    - echo "=== Syncing Claude Code Marketplaces ==="
+
+    # Run the sync script
+    - |
+      if [ "$VERBOSE" == "true" ]; then
+        python3 sync-marketplaces.py --config $SYNC_CONFIG --output $OUTPUT_FILE --verbose
+      else
+        python3 sync-marketplaces.py --config $SYNC_CONFIG --output $OUTPUT_FILE
+      fi
+
+    # Check for changes
+    - |
+      if git diff --quiet $OUTPUT_FILE; then
+        echo "ℹ️  No changes detected"
+        exit 0
+      fi
+
+    # Commit and push changes
+    - git add $OUTPUT_FILE
+    - |
+      TIMESTAMP=$(date -u +"%Y-%m-%d %H:%M:%S UTC")
+      git commit -m "chore: sync marketplaces - $TIMESTAMP
+
+      Automatically aggregated plugins from child marketplaces.
+      Triggered by: $CI_PIPELINE_SOURCE
+
+      See .sync-config.json for source configuration."
+
+    # Push using CI/CD token
+    - |
+      git remote set-url origin "https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+      git push origin HEAD:${CI_COMMIT_REF_NAME}
+
+    - echo "✓ Marketplace updated and pushed to $CI_COMMIT_REF_NAME"
+
+  only:
+    variables:
+      - $CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH
+
+  artifacts:
+    paths:
+      - .claude-plugin/marketplace.json
+    expire_in: 30 days
+
+  cache:
+    paths:
+      - .cache/pip

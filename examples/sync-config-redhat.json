@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "marketplace": {
+    "name": "redhat-marketplace",
+    "version": "1.0.0",
+    "description": "Red Hat Claude Code plugins - aggregated from all departments",
+    "owner": {
+      "name": "Red Hat",
+      "email": "ai-tools@redhat.com"
+    }
+  },
+  "sources": [
+    {
+      "type": "marketplace",
+      "url": "https://github.com/redhat-proddev/claude-plugins",
+      "branch": "main",
+      "denylist": [],
+      "tag_prefix": "proddev"
+    },
+    {
+      "type": "marketplace",
+      "url": "https://gitlab.com/redhat-sre/claude-plugins.git",
+      "branch": "main",
+      "denylist": ["experimental-debug-tool"],
+      "tag_prefix": "sre"
+    },
+    {
+      "type": "marketplace",
+      "url": "https://github.com/redhat-konflux/claude-plugins",
+      "branch": "main",
+      "denylist": [],
+      "tag_prefix": "konflux"
+    },
+    {
+      "type": "skill",
+      "name": "redhat-internal-standards",
+      "description": "Red Hat internal coding standards and practices",
+      "url": "https://github.com/redhat-internal/coding-standards-skill",
+      "branch": "main",
+      "category": "standards",
+      "target_path": "skills/redhat-internal-standards"
+    }
+  ],
+  "sync_settings": {
+    "exclude_patterns": [".git", ".github", ".gitlab", "node_modules", ".DS_Store", "__pycache__"],
+    "provenance_field": "source_marketplace"
+  }
+}

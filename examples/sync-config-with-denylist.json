@@ -1,0 +1,38 @@
+{
+  "version": "1.0",
+  "marketplace": {
+    "name": "curated-marketplace",
+    "version": "1.0.0",
+    "description": "Curated collection excluding experimental plugins",
+    "owner": {
+      "name": "Platform Team",
+      "email": "platform@example.com"
+    }
+  },
+  "sources": [
+    {
+      "type": "marketplace",
+      "url": "https://github.com/upstream/all-plugins",
+      "branch": "main",
+      "denylist": [
+        "experimental-feature-x",
+        "deprecated-tool-y",
+        "unstable-plugin-z"
+      ],
+      "tag_prefix": "upstream"
+    },
+    {
+      "type": "marketplace",
+      "url": "https://github.com/community/contrib-plugins",
+      "branch": "stable",
+      "denylist": [
+        "untested-alpha-plugin"
+      ],
+      "tag_prefix": "community"
+    }
+  ],
+  "sync_settings": {
+    "exclude_patterns": [".git", ".github", "node_modules"],
+    "provenance_field": "source_marketplace"
+  }
+}
