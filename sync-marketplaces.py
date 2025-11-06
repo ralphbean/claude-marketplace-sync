@@ -125,6 +125,13 @@ class MarketplaceAggregator:
             )
             plugin_copy[provenance_field] = "/".join(new_parent_chain)
 
+            # Convert local source paths to remote URLs
+            if "source" in plugin_copy and plugin_copy["source"].startswith("./"):
+                # Extract the plugin path from the local source
+                local_path = plugin_copy["source"].lstrip("./")
+                # Create remote URL pointing to the source marketplace
+                plugin_copy["source"] = f"{url}/tree/{branch}/{local_path}"
+
             # Track provenance
             if plugin_name not in self.provenance_map:
                 self.provenance_map[plugin_name] = []

@@ -438,3 +438,71 @@ class TestMarketplaceProcessing:
         assert "allowed-plugin" in plugin_names
         assert "another-allowed" in plugin_names
         assert "blocked-plugin" not in plugin_names
+
+
+class TestSourceURLConversion:
+    """Test that local source paths are converted to remote URLs."""
+
+    def test_marketplace_plugins_use_remote_source_urls(self, tmp_path):
+        """Test that plugins from marketplaces have remote source URLs, not local paths."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text(
+            json.dumps(
+                {
+                    "marketplace": {"name": "test", "version": "1.0.0"},
+                    "sources": [],
+                }
+            )
+        )
+
+        aggregator = MarketplaceAggregator(str(config_file), str(tmp_path / "output.json"))
+        aggregator.temp_dir = tmp_path / "temp"
+        aggregator.temp_dir.mkdir()
+
+        # Mock _clone_repo to create the marketplace structure
+        def fake_clone(url, branch, target_dir):
+            # Create marketplace directory structure
+            target_dir.mkdir(parents=True, exist_ok=True)
+            plugin_dir = target_dir / ".claude-plugin"
+            plugin_dir.mkdir(parents=True, exist_ok=True)
+
+            # Create marketplace.json with local source paths
+            marketplace_json = plugin_dir / "marketplace.json"
+            marketplace_json.write_text(
+                json.dumps(
+                    {
+                        "plugins": [
+                            {
+                                "name": "test-plugin",
+                                "description": "A test plugin",
+                                "version": "1.0.0",
+                                "source": "./plugins/test-plugin",  # Local path
+                                "category": "test",
+                            }
+                        ]
+                    }
+                )
+            )
+
+        aggregator._clone_repo = fake_clone
+
+        # Process the marketplace
+        aggregator._process_marketplace(
+            {
+                "type": "marketplace",
+                "url": "https://github.com/owner/upstream-marketplace",
+                "branch": "main",
+            },
+            parent_chain=[],
+        )
+
+        # Verify the plugin was added with a remote URL source
+        assert len(aggregator.all_plugins) == 1
+        plugin = aggregator.all_plugins[0]
+        assert plugin["name"] == "test-plugin"
+
+        # Source should be a remote URL, not a local path
+        assert not plugin["source"].startswith("./")
+        assert plugin["source"].startswith("https://")
+        assert "upstream-marketplace" in plugin["source"]
+        assert "test-plugin" in plugin["source"]
