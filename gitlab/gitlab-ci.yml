@@ -60,10 +60,13 @@
 
   before_script:
     # Install dependencies
-    - microdnf install -y git python3
+    - microdnf install -y git python3 curl
     # Configure git for commits
     - git config --global user.name "GitLab CI/CD Bot"
     - git config --global user.email "cicd@gitlab.com"
+    # Download the sync script from GitHub
+    - curl -fsSL https://raw.githubusercontent.com/ralphbean/claude-marketplace-sync/main/sync-marketplaces.py -o sync-marketplaces.py
+    - chmod +x sync-marketplaces.py
 
   script:
     - echo "=== Syncing Claude Code Marketplaces ==="
