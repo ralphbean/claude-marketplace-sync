@@ -1,0 +1,48 @@
+{
+  "version": "1.0",
+  "marketplace": {
+    "name": "enterprise-marketplace",
+    "version": "1.0.0",
+    "description": "My Enterprise Claude Code plugins - aggregated from all departments",
+    "owner": {
+      "name": "My Enterprise",
+      "email": "ai-tools@myenterprise.com"
+    }
+  },
+  "sources": [
+    {
+      "type": "marketplace",
+      "url": "https://github.com/myenterprise/engineering-plugins",
+      "branch": "main",
+      "denylist": [],
+      "tag_prefix": "engineering"
+    },
+    {
+      "type": "marketplace",
+      "url": "https://gitlab.com/myenterprise/operations-plugins.git",
+      "branch": "main",
+      "denylist": ["experimental-debug-tool"],
+      "tag_prefix": "operations"
+    },
+    {
+      "type": "marketplace",
+      "url": "https://github.com/myenterprise/platform-team-plugins",
+      "branch": "main",
+      "denylist": [],
+      "tag_prefix": "platform-team"
+    },
+    {
+      "type": "skill",
+      "name": "enterprise-internal-standards",
+      "description": "Internal coding standards and practices",
+      "url": "https://github.com/myenterprise/coding-standards-skill",
+      "branch": "main",
+      "category": "standards",
+      "target_path": "skills/enterprise-internal-standards"
+    }
+  ],
+  "sync_settings": {
+    "exclude_patterns": [".git", ".github", ".gitlab", "node_modules", ".DS_Store", "__pycache__"],
+    "provenance_field": "source_marketplace"
+  }
+}

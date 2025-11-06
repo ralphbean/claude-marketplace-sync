@@ -19,13 +19,13 @@ A tool for creating hierarchical Claude Code marketplaces through distributed co
 Claude Code marketplaces can only reference individual plugins, not other marketplaces. This makes it difficult to create organizational hierarchies like:
 
 ```
-Red Hat Marketplace
-├── Product & Development Marketplace
-│   ├── Konflux Marketplace
+My Enterprise Marketplace
+├── Engineering Department Marketplace
+│   ├── The Platform Team Marketplace
 │   │   ├── Pipeline Plugin
 │   │   └── Build Plugin
-│   └── OpenShift Plugin
-└── SRE Marketplace
+│   └── API Helper Plugin
+└── Operations Marketplace
     ├── Monitoring Plugin
     └── Incident Response Plugin
 ```
@@ -46,61 +46,61 @@ This tool enables **distributed marketplace composition**:
 
 ### Distributed Recursion Example
 
-**Konflux Marketplace** (leaf node):
+**The Platform Team Marketplace** (leaf node):
 ```json
 {
-  "marketplace": {"name": "konflux-marketplace"},
+  "marketplace": {"name": "platform-team-marketplace"},
   "sources": [
     {
       "type": "skill",
       "name": "pipeline-debugger",
-      "url": "https://github.com/konflux/pipeline-debugger"
+      "url": "https://github.com/the-platform-team/pipeline-debugger"
     }
   ]
 }
 ```
-Result: `konflux-marketplace` contains 1 plugin
+Result: `platform-team-marketplace` contains 1 plugin
 
-**Product & Development Marketplace** (middle node):
+**Engineering Department Marketplace** (middle node):
 ```json
 {
-  "marketplace": {"name": "proddev-marketplace"},
+  "marketplace": {"name": "engineering-marketplace"},
   "sources": [
     {
       "type": "marketplace",
-      "url": "https://github.com/konflux/marketplace",
-      "tag_prefix": "konflux"
+      "url": "https://github.com/the-platform-team/marketplace",
+      "tag_prefix": "platform-team"
     },
     {
       "type": "skill",
-      "name": "openshift-helper",
-      "url": "https://github.com/proddev/openshift-helper"
+      "name": "api-helper",
+      "url": "https://github.com/engineering-department/api-helper"
     }
   ]
 }
 ```
-Result: `proddev-marketplace` contains 2 plugins (1 from Konflux + 1 direct)
+Result: `engineering-marketplace` contains 2 plugins (1 from Platform Team + 1 direct)
 
-**Red Hat Marketplace** (root node):
+**My Enterprise Marketplace** (root node):
 ```json
 {
-  "marketplace": {"name": "redhat-marketplace"},
+  "marketplace": {"name": "enterprise-marketplace"},
   "sources": [
     {
       "type": "marketplace",
-      "url": "https://github.com/proddev/marketplace",
-      "tag_prefix": "proddev",
+      "url": "https://github.com/engineering-department/marketplace",
+      "tag_prefix": "engineering",
       "denylist": ["experimental-plugin"]
     },
     {
       "type": "marketplace",
-      "url": "https://github.com/sre/marketplace",
-      "tag_prefix": "sre"
+      "url": "https://github.com/operations/marketplace",
+      "tag_prefix": "operations"
     }
   ]
 }
 ```
-Result: `redhat-marketplace` contains all plugins from both trees
+Result: `enterprise-marketplace` contains all plugins from both trees
 
 ### Provenance Tracking
 
@@ -109,7 +109,7 @@ Each plugin gets tagged with its source path:
 ```json
 {
   "name": "pipeline-debugger",
-  "source_marketplace": "redhat/proddev/konflux",
+  "source_marketplace": "enterprise/engineering/platform-team",
   ...
 }
 ```
@@ -345,9 +345,9 @@ Users can subscribe to:
 - `company/engineering-marketplace` (2 plugins)
 - `company/company-marketplace` (same 2 plugins, with provenance)
 
-### Example 2: Red Hat Multi-Department Hierarchy
+### Example 2: Enterprise Multi-Department Hierarchy
 
-**Konflux Marketplace**:
+**Platform Team Marketplace**:
 ```json
 {
   "sources": [
@@ -357,22 +357,22 @@ Users can subscribe to:
 }
 ```
 
-**Product & Development Marketplace**:
+**Engineering Department Marketplace**:
 ```json
 {
   "sources": [
     {
       "type": "marketplace",
-      "url": "https://github.com/redhat-konflux/marketplace",
-      "tag_prefix": "konflux"
+      "url": "https://github.com/enterprise/platform-team-marketplace",
+      "tag_prefix": "platform-team"
     },
-    {"type": "skill", "name": "openshift-helper", "url": "..."}
+    {"type": "skill", "name": "api-helper", "url": "..."}
   ]
 }
 ```
-Result: 3 plugins (2 from Konflux + 1 direct)
+Result: 3 plugins (2 from Platform Team + 1 direct)
 
-**SRE Marketplace**:
+**Operations Marketplace**:
 ```json
 {
   "sources": [
@@ -383,31 +383,31 @@ Result: 3 plugins (2 from Konflux + 1 direct)
 ```
 Result: 2 plugins
 
-**Red Hat Marketplace**:
+**My Enterprise Marketplace**:
 ```json
 {
   "sources": [
     {
       "type": "marketplace",
-      "url": "https://github.com/redhat-proddev/marketplace",
-      "tag_prefix": "proddev",
+      "url": "https://github.com/enterprise/engineering-marketplace",
+      "tag_prefix": "engineering",
       "denylist": ["build-analyzer"]
     },
     {
       "type": "marketplace",
-      "url": "https://github.com/redhat-sre/marketplace",
-      "tag_prefix": "sre"
+      "url": "https://github.com/enterprise/operations-marketplace",
+      "tag_prefix": "operations"
     }
   ]
 }
 ```
-Result: 4 plugins (2 from proddev after denylist + 2 from sre)
+Result: 4 plugins (2 from engineering after denylist + 2 from operations)
 
 Users can subscribe at any level:
-- `redhat-konflux/marketplace` (2 plugins)
-- `redhat-proddev/marketplace` (3 plugins)
-- `redhat-sre/marketplace` (2 plugins)
-- `redhat/marketplace` (4 plugins, all tagged with provenance)
+- `enterprise/platform-team-marketplace` (2 plugins)
+- `enterprise/engineering-marketplace` (3 plugins)
+- `enterprise/operations-marketplace` (2 plugins)
+- `enterprise/enterprise-marketplace` (4 plugins, all tagged with provenance)
 
 ### Example 3: Upstream + Downstream Pattern
 
@@ -445,11 +445,11 @@ Every plugin gets a `source_marketplace` field (configurable via `provenance_fie
 ```json
 {
   "name": "pipeline-debugger",
-  "description": "Debug Konflux pipelines",
+  "description": "Debug CI/CD pipelines",
   "version": "1.0.0",
-  "source": "https://github.com/konflux/pipeline-debugger",
+  "source": "https://github.com/the-platform-team/pipeline-debugger",
   "category": "debugging",
-  "source_marketplace": "redhat/proddev/konflux"
+  "source_marketplace": "enterprise/engineering/platform-team"
 }
 ```
 
@@ -470,7 +470,7 @@ root_marketplace / child_marketplace / grandchild_marketplace
 
 Example:
 ```
-redhat / proddev / konflux
+enterprise / engineering / platform-team
 ```
 
 ## Example Configurations
@@ -478,7 +478,7 @@ redhat / proddev / konflux
 See the [examples/](examples/) directory for complete working examples:
 
 - **[sync-config-simple.json](examples/sync-config-simple.json)** - Basic two-level hierarchy
-- **[sync-config-redhat.json](examples/sync-config-redhat.json)** - Multi-department Red Hat example
+- **[sync-config-enterprise.json](examples/sync-config-enterprise.json)** - Multi-department enterprise example
 - **[sync-config-with-denylist.json](examples/sync-config-with-denylist.json)** - Curated marketplace with denylisting
 - **[github-action-sync.yml](examples/github-action-sync.yml)** - GitHub Actions workflow
 - **[gitlab-ci-sync.yml](examples/gitlab-ci-sync.yml)** - GitLab CI/CD template
