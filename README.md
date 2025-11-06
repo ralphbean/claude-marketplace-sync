@@ -406,6 +406,12 @@ See [github/workflows/sync-marketplaces.yml](github/workflows/sync-marketplaces.
 
 The GitLab CI/CD template is designed to be included and extended in your existing `.gitlab-ci.yml` file.
 
+#### Requirements
+
+1. **Runner tags**: Configure `tags:` to match your GitLab runners
+2. **GITLAB_TOKEN**: Add as a CI/CD variable with `write_repository` scope
+3. **Branch permissions**: Ensure the token user can push to your target branch
+
 #### Basic Usage
 
 Include the remote template and extend it to control when it runs:
@@ -416,6 +422,8 @@ include:
 
 sync-marketplaces:
   extends: .sync-marketplaces-template
+  tags:
+    - your-runners  # Use your environment's runner tags
   only:
     - main  # Only run on main branch
 ```
