@@ -99,6 +99,7 @@
 
     # Push using CI/CD token
     - |
+      git config --global http.sslVerify false
       git remote set-url origin "https://oauth2:${CI_JOB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
       git push origin HEAD:${CI_COMMIT_REF_NAME}
 
