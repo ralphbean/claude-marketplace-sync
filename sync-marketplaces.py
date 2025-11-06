@@ -193,12 +193,18 @@ class MarketplaceAggregator:
         self.log(f"Cloning {url} (branch: {branch}) to {target_dir}")
 
         # Support both GitHub/GitLab URLs
+        # Disable credential prompts to prevent hanging on invalid URLs
+        env = os.environ.copy()
+        env["GIT_TERMINAL_PROMPT"] = "0"  # Disable credential prompts
+        env["GIT_ASKPASS"] = "true"  # Use /bin/true for askpass (returns nothing)
+
         try:
             subprocess.run(
                 ["git", "clone", "--branch", branch, "--depth", "1", url, str(target_dir)],
                 check=True,
                 capture_output=True,
                 text=True,
+                env=env,
             )
         except subprocess.CalledProcessError as e:
             self.log(f"Failed to clone {url}: {e.stderr}", level="error")
