@@ -1,0 +1,71 @@
+# GitLab CI Template for Claude Marketplace Sync
+#
+# Usage: Include this template in your .gitlab-ci.yml:
+#
+#   include:
+#     - remote: 'https://raw.githubusercontent.com/ralphbean/claude-marketplace-sync/main/.gitlab-ci-template.yml'
+#
+#   variables:
+#     SYNC_CONFIG_PATH: ".sync-config.json"
+#     SYNC_OUTPUT_PATH: ".claude-plugin/marketplace.json"
+#     SYNC_VERBOSE: "true"
+#
+#   # Specify your GitLab runner tags (REQUIRED)
+#   sync-marketplace:
+#     tags:
+#       - docker  # Replace with your runner tags
+#
+# Required CI/CD Variables (set in Settings → CI/CD → Variables):
+#   GITLAB_TOKEN: GitLab PAT with 'api' and 'write_repository' scopes
+
+.sync-marketplace-template:
+  stage: sync
+  image: python:3.11
+  variables:
+    SYNC_CONFIG_PATH: ".sync-config.json"
+    SYNC_OUTPUT_PATH: ".claude-plugin/marketplace.json"
+    SYNC_VERBOSE: "false"
+    GIT_STRATEGY: clone
+  script:
+    # Install git
+    - apt-get update && apt-get install -y git
+
+    # Clone the sync tool
+    - git clone https://github.com/ralphbean/claude-marketplace-sync.git /tmp/sync-tool
+    - cd /tmp/sync-tool
+
+    # Run the sync
+    - |
+      if [ "${SYNC_VERBOSE}" = "true" ]; then
+        python3 sync-marketplaces.py \
+          --config "${CI_PROJECT_DIR}/${SYNC_CONFIG_PATH}" \
+          --output "${CI_PROJECT_DIR}/${SYNC_OUTPUT_PATH}" \
+          --verbose
+      else
+        python3 sync-marketplaces.py \
+          --config "${CI_PROJECT_DIR}/${SYNC_CONFIG_PATH}" \
+          --output "${CI_PROJECT_DIR}/${SYNC_OUTPUT_PATH}"
+      fi
+
+    # Commit and push changes
+    - cd "${CI_PROJECT_DIR}"
+    - git config user.name "GitLab CI"
+    - git config user.email "gitlab-ci@${CI_SERVER_HOST}"
+    - git remote set-url origin "https://oauth2:${GITLAB_TOKEN}@${CI_SERVER_HOST}/${CI_PROJECT_PATH}.git"
+    - git add .claude-plugin/
+    - |
+      if ! git diff --cached --quiet; then
+        git commit -m "chore: sync marketplace plugins
+
+        🤖 Automated sync from configured marketplace sources"
+        git push origin HEAD:${CI_COMMIT_REF_NAME}
+      else
+        echo "No changes to commit"
+      fi
+  rules:
+    - if: $CI_PIPELINE_SOURCE == "schedule"
+    - if: $CI_PIPELINE_SOURCE == "web"
+
+# Default job - can be overridden in downstream projects
+sync-marketplace:
+  extends: .sync-marketplace-template

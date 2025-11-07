@@ -1,0 +1,16 @@
+{
+  "name": "Claude Marketplace Sync Tools",
+  "description": "Tools for managing distributed Claude Code marketplace synchronization",
+  "author": "Ralph Bean",
+  "homepage": "https://github.com/ralphbean/claude-marketplace-sync",
+  "plugins": [
+    {
+      "name": "setup-marketplace-sync",
+      "description": "Configure automated Claude Code marketplace synchronization in your repository. Supports GitHub Actions and GitLab CI/CD with automated setup including pipeline schedules, tokens, and configuration generation.",
+      "source": "./skills/setup-marketplace-sync",
+      "author": "Ralph Bean",
+      "categories": ["DevOps", "Automation", "Setup"],
+      "version": "1.2.0"
+    }
+  ]
+}
