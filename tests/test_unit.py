@@ -293,9 +293,7 @@ class TestLogging:
         config_file = tmp_path / "config.json"
         config_file.write_text('{"sources": []}')
 
-        aggregator = MarketplaceAggregator(
-            str(config_file), "output.json", verbose=True
-        )
+        aggregator = MarketplaceAggregator(str(config_file), "output.json", verbose=True)
         aggregator.log("Test message")
 
         captured = capsys.readouterr()
@@ -307,9 +305,7 @@ class TestLogging:
         config_file = tmp_path / "config.json"
         config_file.write_text('{"sources": []}')
 
-        aggregator = MarketplaceAggregator(
-            str(config_file), "output.json", verbose=False
-        )
+        aggregator = MarketplaceAggregator(str(config_file), "output.json", verbose=False)
         aggregator.log("Test message")
 
         captured = capsys.readouterr()
@@ -320,9 +316,7 @@ class TestLogging:
         config_file = tmp_path / "config.json"
         config_file.write_text('{"sources": []}')
 
-        aggregator = MarketplaceAggregator(
-            str(config_file), "output.json", verbose=False
-        )
+        aggregator = MarketplaceAggregator(str(config_file), "output.json", verbose=False)
         aggregator.log("Error message", level="error")
 
         captured = capsys.readouterr()
@@ -466,9 +460,7 @@ class TestSourceURLConversion:
             )
         )
 
-        aggregator = MarketplaceAggregator(
-            str(config_file), str(tmp_path / "output.json")
-        )
+        aggregator = MarketplaceAggregator(str(config_file), str(tmp_path / "output.json"))
         aggregator.temp_dir = tmp_path / "temp"
         aggregator.temp_dir.mkdir()
 
@@ -536,9 +528,7 @@ class TestDiamondDependencyDeduplication:
             )
         )
 
-        aggregator = MarketplaceAggregator(
-            str(config_file), str(tmp_path / "output.json")
-        )
+        aggregator = MarketplaceAggregator(str(config_file), str(tmp_path / "output.json"))
         aggregator.temp_dir = tmp_path / "temp"
         aggregator.temp_dir.mkdir()
 

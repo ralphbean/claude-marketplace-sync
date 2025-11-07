@@ -31,15 +31,11 @@ class TestEndToEndSync:
         This is a real integration test that clones the actual repository.
         """
         # Use the example test config
-        config_file = (
-            Path(__file__).parent.parent / "examples" / "test-sync-config.json"
-        )
+        config_file = Path(__file__).parent.parent / "examples" / "test-sync-config.json"
         output_file = tmp_path / "marketplace.json"
 
         # Create aggregator and run
-        aggregator = MarketplaceAggregator(
-            str(config_file), str(output_file), verbose=True
-        )
+        aggregator = MarketplaceAggregator(str(config_file), str(output_file), verbose=True)
         result = aggregator.run()
 
         # Verify success
@@ -81,9 +77,7 @@ class TestEndToEndSync:
             assert plugin["name"] in origins
             assert origins[plugin["name"]] == "ralphbean"
 
-        print(
-            f"\nSynced {len(marketplace['plugins'])} plugins from ralphbean's marketplace"
-        )
+        print(f"\nSynced {len(marketplace['plugins'])} plugins from ralphbean's marketplace")
 
     def test_sync_with_custom_config(self, tmp_path):
         """Test syncing with a custom configuration."""
@@ -115,9 +109,7 @@ class TestEndToEndSync:
         output_file = tmp_path / "output" / "marketplace.json"
 
         # Run aggregator
-        aggregator = MarketplaceAggregator(
-            str(config_file), str(output_file), verbose=True
-        )
+        aggregator = MarketplaceAggregator(str(config_file), str(output_file), verbose=True)
         result = aggregator.run()
 
         # Verify success
@@ -205,10 +197,7 @@ class TestEndToEndSync:
             assert plugin_to_block not in filtered_plugin_names
 
             # Should have one fewer plugin
-            assert (
-                len(marketplace_filtered["plugins"])
-                == len(marketplace_full["plugins"]) - 1
-            )
+            assert len(marketplace_filtered["plugins"]) == len(marketplace_full["plugins"]) - 1
 
     def test_origin_tracking(self, tmp_path):
         """Test that origin is properly tracked."""
@@ -230,9 +219,7 @@ class TestEndToEndSync:
         output_file = tmp_path / "marketplace.json"
 
         # Run with verbose to capture origin summary
-        aggregator = MarketplaceAggregator(
-            str(config_file), str(output_file), verbose=True
-        )
+        aggregator = MarketplaceAggregator(str(config_file), str(output_file), verbose=True)
         result = aggregator.run()
 
         assert result == 0
@@ -281,9 +268,7 @@ class TestEndToEndSync:
 
         output_file = tmp_path / "marketplace.json"
 
-        aggregator = MarketplaceAggregator(
-            str(config_file), str(output_file), verbose=True
-        )
+        aggregator = MarketplaceAggregator(str(config_file), str(output_file), verbose=True)
 
         # Manually add some duplicate plugins to test dedup
         aggregator.all_plugins = [
@@ -370,9 +355,7 @@ class TestErrorHandling:
 
         output_file = tmp_path / "output.json"
 
-        aggregator = MarketplaceAggregator(
-            str(config_file), str(output_file), verbose=False
-        )
+        aggregator = MarketplaceAggregator(str(config_file), str(output_file), verbose=False)
         result = aggregator.run()
 
         # Should return error code

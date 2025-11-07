@@ -139,9 +139,7 @@ class MarketplaceAggregator:
                 self.origin_map[plugin_name] = []
             self.origin_map[plugin_name].append("/".join(new_parent_chain))
 
-            self.log(
-                f"  Adding plugin: {plugin_name} (from {'/'.join(new_parent_chain)})"
-            )
+            self.log(f"  Adding plugin: {plugin_name} (from {'/'.join(new_parent_chain)})")
             self.all_plugins.append(plugin_copy)
 
         self.log(
@@ -271,9 +269,7 @@ class MarketplaceAggregator:
 
             return "1.0.0"
         except Exception as e:
-            self.log(
-                f"Failed to extract version from {skill_md_path}: {e}", level="error"
-            )
+            self.log(f"Failed to extract version from {skill_md_path}: {e}", level="error")
             return "1.0.0"
 
     def _generate_marketplace(self):
@@ -364,9 +360,7 @@ def main():
         default=".claude-plugin/marketplace.json",
         help="Path to output marketplace.json file (default: .claude-plugin/marketplace.json)",
     )
-    parser.add_argument(
-        "-v", "--verbose", action="store_true", help="Enable verbose logging"
-    )
+    parser.add_argument("-v", "--verbose", action="store_true", help="Enable verbose logging")
 
     args = parser.parse_args()
 
