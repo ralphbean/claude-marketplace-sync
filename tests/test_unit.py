@@ -66,6 +66,87 @@ class TestExtractRepoName:
         assert result == "repo"
 
 
+class TestExtractMetadataFromSkill:
+    """Test _extract_metadata_from_skill method."""
+
+    def test_extract_full_metadata(self, tmp_path):
+        """Test extracting description, author, and categories."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"sources": []}')
+
+        skill_md = tmp_path / "SKILL.md"
+        skill_md.write_text(
+            """# My Skill
+
+## Skill Metadata
+- version: "1.0.0"
+- description: "A test skill for unit testing"
+- author: "Test Author"
+- categories: ["Testing", "Development"]
+
+## Overview
+Content here...
+"""
+        )
+
+        aggregator = MarketplaceAggregator(str(config_file), "output.json")
+        result = aggregator._extract_metadata_from_skill(skill_md)
+        assert result["description"] == "A test skill for unit testing"
+        assert result["author"] == "Test Author"
+        assert result["categories"] == ["Testing", "Development"]
+
+    def test_extract_metadata_partial(self, tmp_path):
+        """Test extracting only some metadata fields."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"sources": []}')
+
+        skill_md = tmp_path / "SKILL.md"
+        skill_md.write_text(
+            """# My Skill
+
+## Skill Metadata
+- description: "Only description present"
+
+## Overview
+Content here...
+"""
+        )
+
+        aggregator = MarketplaceAggregator(str(config_file), "output.json")
+        result = aggregator._extract_metadata_from_skill(skill_md)
+        assert result["description"] == "Only description present"
+        assert "author" not in result
+        assert "categories" not in result
+
+    def test_extract_metadata_missing_section(self, tmp_path):
+        """Test when metadata section is missing."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"sources": []}')
+
+        skill_md = tmp_path / "SKILL.md"
+        skill_md.write_text(
+            """# My Skill
+
+Just regular content, no metadata section.
+"""
+        )
+
+        aggregator = MarketplaceAggregator(str(config_file), "output.json")
+        result = aggregator._extract_metadata_from_skill(skill_md)
+        assert result == {}
+
+    def test_extract_metadata_missing_file(self, tmp_path):
+        """Test when SKILL.md doesn't exist."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"sources": []}')
+
+        skill_md = tmp_path / "SKILL.md"  # Don't create the file
+
+        aggregator = MarketplaceAggregator(str(config_file), "output.json")
+        result = aggregator._extract_metadata_from_skill(skill_md)
+        assert result == {}
+
+
 class TestExtractVersionFromSkill:
     """Test _extract_version_from_skill method."""
 
@@ -669,6 +750,164 @@ class TestSourceURLConversion:
         assert isinstance(plugin["source"], dict)
         assert plugin["source"]["source"] == "github"
         assert plugin["source"]["repo"] == "some/repo"
+
+
+class TestProcessLocalSkill:
+    """Test _process_local_skill method."""
+
+    def test_process_local_skill_basic(self, tmp_path):
+        """Test processing a basic local skill."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"sources": []}')
+
+        # Create a local skill directory
+        skill_dir = tmp_path / "skills" / "test-skill"
+        skill_dir.mkdir(parents=True)
+
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text(
+            """# Test Skill
+
+## Skill Metadata
+- version: "1.5.0"
+- description: "A local test skill"
+- author: "Local Author"
+- categories: ["Testing", "Local"]
+
+## Instructions
+Do something...
+"""
+        )
+
+        aggregator = MarketplaceAggregator(str(config_file), "output.json")
+
+        source = {
+            "type": "local_skill",
+            "name": "test-skill",
+            "path": "skills/test-skill",
+        }
+
+        aggregator._process_local_skill(source, parent_chain=[])
+
+        # Verify plugin was added
+        assert len(aggregator.all_plugins) == 1
+        plugin = aggregator.all_plugins[0]
+        assert plugin["name"] == "test-skill"
+        assert plugin["version"] == "1.5.0"
+        assert plugin["description"] == "A local test skill"
+        assert plugin["author"] == "Local Author"
+        assert plugin["categories"] == ["Testing", "Local"]
+        assert plugin["source"] == "./skills/test-skill"
+
+        # Verify origin is tracked
+        assert "test-skill" in aggregator.origin_map
+        assert aggregator.origin_map["test-skill"] == ["local"]
+
+    def test_process_local_skill_with_parent_chain(self, tmp_path):
+        """Test that parent chain affects origin tracking."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"sources": []}')
+
+        skill_dir = tmp_path / "skills" / "test-skill"
+        skill_dir.mkdir(parents=True)
+
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text(
+            """# Test Skill
+
+## Skill Metadata
+- version: "1.0.0"
+"""
+        )
+
+        aggregator = MarketplaceAggregator(str(config_file), "output.json")
+
+        source = {
+            "type": "local_skill",
+            "name": "test-skill",
+            "path": "skills/test-skill",
+        }
+
+        aggregator._process_local_skill(source, parent_chain=["enterprise", "team-a"])
+
+        # Verify origin uses parent chain
+        assert aggregator.origin_map["test-skill"] == ["enterprise/team-a"]
+
+    def test_process_local_skill_missing_path(self, tmp_path):
+        """Test error when local skill path doesn't exist."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"sources": []}')
+
+        aggregator = MarketplaceAggregator(str(config_file), "output.json")
+
+        source = {
+            "type": "local_skill",
+            "name": "nonexistent-skill",
+            "path": "skills/nonexistent",
+        }
+
+        # Should raise FileNotFoundError
+        with pytest.raises(FileNotFoundError, match="Local skill path does not exist"):
+            aggregator._process_local_skill(source, parent_chain=[])
+
+    def test_process_local_skill_missing_skill_md(self, tmp_path):
+        """Test error when SKILL.md is missing from local skill."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"sources": []}')
+
+        # Create skill directory but no SKILL.md
+        skill_dir = tmp_path / "skills" / "incomplete-skill"
+        skill_dir.mkdir(parents=True)
+
+        aggregator = MarketplaceAggregator(str(config_file), "output.json")
+
+        source = {
+            "type": "local_skill",
+            "name": "incomplete-skill",
+            "path": "skills/incomplete-skill",
+        }
+
+        # Should raise FileNotFoundError
+        with pytest.raises(FileNotFoundError, match="SKILL.md not found"):
+            aggregator._process_local_skill(source, parent_chain=[])
+
+    def test_process_local_skill_minimal_metadata(self, tmp_path):
+        """Test local skill with minimal metadata (only version)."""
+        config_file = tmp_path / "config.json"
+        config_file.write_text('{"sources": []}')
+
+        skill_dir = tmp_path / "skills" / "minimal-skill"
+        skill_dir.mkdir(parents=True)
+
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text(
+            """# Minimal Skill
+
+## Skill Metadata
+- version: "2.0.0"
+
+Just the basics.
+"""
+        )
+
+        aggregator = MarketplaceAggregator(str(config_file), "output.json")
+
+        source = {
+            "type": "local_skill",
+            "name": "minimal-skill",
+            "path": "skills/minimal-skill",
+        }
+
+        aggregator._process_local_skill(source, parent_chain=[])
+
+        plugin = aggregator.all_plugins[0]
+        assert plugin["name"] == "minimal-skill"
+        assert plugin["version"] == "2.0.0"
+        # Default description when not in metadata
+        assert plugin["description"] == "Skill: minimal-skill"
+        # Optional fields should not be present
+        assert "author" not in plugin
+        assert "categories" not in plugin
 
 
 class TestDiamondDependencyDeduplication:

@@ -74,13 +74,15 @@ class MarketplaceAggregator:
             return 1
 
     def _process_source(self, source: Dict, parent_chain: List[str]):
-        """Process a single source (marketplace or skill)."""
+        """Process a single source (marketplace, skill, or local_skill)."""
         source_type = source.get("type", "skill")
 
         if source_type == "marketplace":
             self._process_marketplace(source, parent_chain)
         elif source_type == "skill":
             self._process_skill(source, parent_chain)
+        elif source_type == "local_skill":
+            self._process_local_skill(source, parent_chain)
         else:
             self.log(f"Unknown source type: {source_type}", level="error")
 
@@ -200,6 +202,55 @@ class MarketplaceAggregator:
 
         self.all_plugins.append(plugin_entry)
         self.log(f"✓ Added skill: {name} (version: {version})")
+
+    def _process_local_skill(self, source: Dict, parent_chain: List[str]):
+        """Process a local skill source (already in the repository)."""
+        name = source["name"]
+        path = source["path"]
+
+        self.log(f"Processing local skill: {name} from {path}")
+
+        # Resolve path relative to config file location
+        parent_dir = self.config_path.parent
+        skill_path = parent_dir / path
+
+        # Validate that the path exists
+        if not skill_path.exists():
+            self.log(f"Local skill path does not exist: {skill_path}", level="error")
+            raise FileNotFoundError(f"Local skill path does not exist: {skill_path}")
+
+        # Check for SKILL.md
+        skill_md = skill_path / "SKILL.md"
+        if not skill_md.exists():
+            self.log(f"SKILL.md not found in {skill_path}", level="error")
+            raise FileNotFoundError(f"SKILL.md not found in {skill_path}")
+
+        # Extract version and metadata from SKILL.md
+        version = self._extract_version_from_skill(skill_md)
+        metadata = self._extract_metadata_from_skill(skill_md)
+
+        # Create plugin entry
+        plugin_entry = {
+            "name": name,
+            "description": metadata.get("description", f"Skill: {name}"),
+            "version": version,
+            "source": f"./{path}",
+        }
+
+        # Add optional fields if present in metadata
+        if "author" in metadata:
+            plugin_entry["author"] = metadata["author"]
+        if "categories" in metadata:
+            plugin_entry["categories"] = metadata["categories"]
+
+        # Track origin
+        origin = "/".join(parent_chain) if parent_chain else "local"
+        if name not in self.origin_map:
+            self.origin_map[name] = []
+        self.origin_map[name].append(origin)
+
+        self.all_plugins.append(plugin_entry)
+        self.log(f"✓ Added local skill: {name} (version: {version})")
 
     def _clone_repo(self, url: str, branch: str, target_dir: Path):
         """Clone a git repository."""
@@ -333,6 +384,55 @@ class MarketplaceAggregator:
         except Exception as e:
             self.log(f"Failed to extract version from {skill_md_path}: {e}", level="error")
             return "1.0.0"
+
+    def _extract_metadata_from_skill(self, skill_md_path: Path) -> Dict:
+        """Extract metadata (description, author, categories) from SKILL.md file."""
+        metadata = {}
+
+        if not skill_md_path.exists():
+            return metadata
+
+        try:
+            with open(skill_md_path) as f:
+                content = f.read()
+
+            # Extract metadata from ## Skill Metadata section
+            metadata_section = re.search(
+                r"##\s*Skill Metadata\s*\n(.*?)(?=\n##|\Z)",
+                content,
+                re.DOTALL | re.IGNORECASE,
+            )
+
+            if metadata_section:
+                section_content = metadata_section.group(1)
+
+                # Extract description
+                desc_match = re.search(r'-\s*description:\s*["\']([^"\']+)["\']', section_content)
+                if desc_match:
+                    metadata["description"] = desc_match.group(1)
+
+                # Extract author
+                author_match = re.search(r'-\s*author:\s*["\']([^"\']+)["\']', section_content)
+                if author_match:
+                    metadata["author"] = author_match.group(1)
+
+                # Extract categories (array format)
+                categories_match = re.search(
+                    r"-\s*categories:\s*\[(.*?)\]", section_content, re.DOTALL
+                )
+                if categories_match:
+                    categories_str = categories_match.group(1)
+                    # Parse comma-separated quoted strings
+                    categories = [
+                        cat.strip().strip("\"'") for cat in categories_str.split(",") if cat.strip()
+                    ]
+                    if categories:
+                        metadata["categories"] = categories
+
+            return metadata
+        except Exception as e:
+            self.log(f"Failed to extract metadata from {skill_md_path}: {e}", level="error")
+            return metadata
 
     def _generate_marketplace(self):
         """Generate the final marketplace.json file."""

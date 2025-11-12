@@ -366,3 +366,156 @@ class TestErrorHandling:
         # This would require mocking, so we'll skip for now
         # The code already handles this case by logging an error
         pass
+
+
+class TestLocalSkills:
+    """Test local skill functionality end-to-end."""
+
+    def test_process_local_skill_end_to_end(self, tmp_path):
+        """Test syncing with a local skill."""
+        # Create a local skill directory
+        skill_dir = tmp_path / "skills" / "test-local-skill"
+        skill_dir.mkdir(parents=True)
+
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text(
+            """# Test Local Skill
+
+## Skill Metadata
+- version: "1.5.0"
+- description: "A functional test local skill"
+- author: "Functional Test Author"
+- categories: ["Testing", "Functional"]
+
+## Instructions
+This is a test local skill for functional testing.
+"""
+        )
+
+        # Create config file
+        config_file = tmp_path / "config.json"
+        config_data = {
+            "version": "1.0",
+            "marketplace": {
+                "name": "local-skills-marketplace",
+                "version": "1.0.0",
+                "description": "Marketplace with local skills",
+                "owner": {"name": "Test User", "email": "test@test.com"},
+            },
+            "sources": [
+                {
+                    "type": "local_skill",
+                    "name": "test-local-skill",
+                    "path": "skills/test-local-skill",
+                }
+            ],
+        }
+        config_file.write_text(json.dumps(config_data, indent=2))
+
+        output_file = tmp_path / "output" / "marketplace.json"
+
+        # Run aggregator
+        aggregator = MarketplaceAggregator(str(config_file), str(output_file), verbose=True)
+        result = aggregator.run()
+
+        # Verify success
+        assert result == 0
+        assert output_file.exists()
+
+        # Verify content
+        with open(output_file) as f:
+            marketplace = json.load(f)
+
+        assert marketplace["name"] == "local-skills-marketplace"
+        assert len(marketplace["plugins"]) == 1
+
+        plugin = marketplace["plugins"][0]
+        assert plugin["name"] == "test-local-skill"
+        assert plugin["version"] == "1.5.0"
+        assert plugin["description"] == "A functional test local skill"
+        assert plugin["author"] == "Functional Test Author"
+        assert plugin["categories"] == ["Testing", "Functional"]
+        assert plugin["source"] == "./skills/test-local-skill"
+
+        # Check origins.json
+        origins_file = tmp_path / "output" / "origins.json"
+        assert origins_file.exists()
+
+        with open(origins_file) as f:
+            origins = json.load(f)
+
+        assert origins["test-local-skill"] == "local"
+
+    def test_local_skill_with_remote_marketplace(self, tmp_path):
+        """Test combining local skills with remote marketplace sources."""
+        # Create a local skill
+        skill_dir = tmp_path / "skills" / "local-skill"
+        skill_dir.mkdir(parents=True)
+
+        skill_md = skill_dir / "SKILL.md"
+        skill_md.write_text(
+            """# Local Skill
+
+## Skill Metadata
+- version: "2.0.0"
+- description: "Local skill combined with remote"
+
+## Instructions
+Test.
+"""
+        )
+
+        # Create config with both local skill and remote marketplace
+        config_file = tmp_path / "config.json"
+        config_data = {
+            "version": "1.0",
+            "marketplace": {
+                "name": "combined-marketplace",
+                "version": "1.0.0",
+            },
+            "sources": [
+                {
+                    "type": "local_skill",
+                    "name": "local-skill",
+                    "path": "skills/local-skill",
+                },
+                {
+                    "type": "marketplace",
+                    "url": "https://github.com/ralphbean/claude-code-plugins",
+                    "branch": "main",
+                    "tag_prefix": "remote",
+                },
+            ],
+        }
+        config_file.write_text(json.dumps(config_data, indent=2))
+
+        output_file = tmp_path / "output" / "marketplace.json"
+
+        # Run aggregator
+        aggregator = MarketplaceAggregator(str(config_file), str(output_file), verbose=True)
+        result = aggregator.run()
+
+        assert result == 0
+
+        # Verify both local and remote plugins are present
+        with open(output_file) as f:
+            marketplace = json.load(f)
+
+        plugin_names = [p["name"] for p in marketplace["plugins"]]
+        assert "local-skill" in plugin_names
+
+        # Should have remote plugins too
+        assert len(marketplace["plugins"]) > 1
+
+        # Verify origins
+        origins_file = tmp_path / "output" / "origins.json"
+        with open(origins_file) as f:
+            origins = json.load(f)
+
+        # Local skill has "local" origin
+        assert origins["local-skill"] == "local"
+
+        # Other plugins have "remote" origin
+        remote_plugins = [p for p in marketplace["plugins"] if p["name"] != "local-skill"]
+        for plugin in remote_plugins:
+            assert origins[plugin["name"]] == "remote"
